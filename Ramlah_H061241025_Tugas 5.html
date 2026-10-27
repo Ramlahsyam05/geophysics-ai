@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Hydro-Geospatial & Bathymetry Dashboard - Danau Unhas</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            900: '#0B1120',
+                            800: '#0F172A',
+                            700: '#1E293B',
+                            600: '#334155'
+                        },
+                        cyan: {
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                            600: '#0891b2'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Plotly.js for 3D Visualization -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b1120;
+            color: #f8fafc;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        .glass-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            border-color: rgba(6, 182, 212, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.15);
+        }
+        .glow-text-cyan {
+            text-shadow: 0 0 12px rgba(6, 182, 212, 0.5);
+        }
+        .glow-border-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #06b6d4;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12 antialiased selection:bg-cyan-500 selection:text-white">
+
+    <!-- Header / Navbar -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-slate-800/80 px-4 lg:px-8 py-4 mb-6">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-cyan-500/30">
+                    <i class="fa-solid font-bold fa-water"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-xl md:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-cyan-400 bg-clip-text text-transparent">
+                            DANAU UNHAS HYDRO-GEOSPATIAL
+                        </h1>
+                        <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Executive Edition</span>
+                    </div>
+                    <p class="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
+                        <span><i class="fa-solid fa-location-dot text-cyan-400 mr-1"></i>UTM Zone 50S | Makassar, Indonesia</span>
+                        <span>•</span>
+                        <span>High-Precision Hydrographic Bathymetry Survey</span>
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="resetFilters()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 transition border border-slate-700 flex items-center gap-2">
+                    <i class="fa-solid fa-rotate"></i> Reset Filters
+                </button>
+                <button onclick="exportToCSV()" class="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-semibold text-xs transition shadow-lg shadow-cyan-500/20 flex items-center gap-2">
+                    <i class="fa-solid fa-file-csv"></i> Export Dataset (CSV)
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 space-y-6">
+
+        <!-- Executive KPI Cards -->
+        <section class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3" id="kpiContainer">
+            <!-- KPIs dynamic insertion -->
+        </section>
+
+        <!-- Dynamic Control Filter Panel -->
+        <section class="glass-panel rounded-2xl p-5 border border-slate-800">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+                <h3 class="text-sm font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-cyan-400"></i> Interactive Spatial Filters
+                </h3>
+                <span id="filteredCountBadge" class="text-xs font-mono text-cyan-400 bg-cyan-950/60 border border-cyan-800/50 px-2.5 py-1 rounded-md">
+                    Showing 500 / 500 points
+                </span>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                <!-- Feature Category Multi-Select -->
+                <div>
+                    <label class="block font-medium text-slate-300 mb-1.5">Feature Zone</label>
+                    <select id="filterFeature" onchange="applyFilters()" class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500 transition">
+                        <option value="ALL">All Hydrographic Features</option>
+                        <option value="Deep Basin">Deep Basin</option>
+                        <option value="Shallow Shoreline">Shallow Shoreline</option>
+                        <option value="Mid-Depth Floor">Mid-Depth Floor</option>
+                        <option value="Submerged Ridge">Submerged Ridge</option>
+                        <option value="Inlet Slope">Inlet Slope</option>
+                        <option value="Outlet Slope">Outlet Slope</option>
+                        <option value="Embankment Edge">Embankment Edge</option>
+                    </select>
+                </div>
+
+                <!-- Depth Range Slider -->
+                <div>
+                    <div class="flex justify-between font-medium text-slate-300 mb-1.5">
+                        <span>Depth Range (m)</span>
+                        <span id="depthValueLabel" class="text-cyan-400 font-mono">0.0m - 8.0m</span>
+                    </div>
+                    <input type="range" id="filterDepth" min="0" max="8" step="0.1" value="8" oninput="applyFilters()" class="w-full accent-cyan-500 bg-slate-800 h-2 rounded-lg cursor-pointer">
+                </div>
+
+                <!-- Slope Range Slider -->
+                <div>
+                    <div class="flex justify-between font-medium text-slate-300 mb-1.5">
+                        <span>Max Slope Angle (°)</span>
+                        <span id="slopeValueLabel" class="text-cyan-400 font-mono">35.0°</span>
+                    </div>
+                    <input type="range" id="filterSlope" min="0" max="35" step="0.5" value="35" oninput="applyFilters()" class="w-full accent-cyan-500 bg-slate-800 h-2 rounded-lg cursor-pointer">
+                </div>
+
+                <!-- Point ID Search -->
+                <div>
+                    <label class="block font-medium text-slate-300 mb-1.5">Search Survey Point ID</label>
+                    <div class="relative">
+                        <input type="text" id="filterSearch" placeholder="e.g. 42 or Point #120" onkeyup="applyFilters()" class="w-full bg-slate-900/90 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500 transition">
+                        <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-500"></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Chart Visualizations Grid -->
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- 3D Bathymetric Mesh Surface Chart -->
+            <div class="lg:col-span-8 glass-panel rounded-2xl p-5 border border-slate-800 flex flex-col">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-cube text-cyan-400"></i> 3D Bathymetric Surface Terrain Model
+                        </h2>
+                        <p class="text-xs text-slate-400">Interactive 3D elevation and sub-surface topography of Lake Bed</p>
+                    </div>
+                    <span class="text-[10px] uppercase font-mono px-2 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700">Drag to Rotate | Scroll to Zoom</span>
+                </div>
+                <div id="plotly3d" class="w-full h-[400px] rounded-xl overflow-hidden bg-slate-950/50"></div>
+            </div>
+
+            <!-- Spatial 2D Map Scatter -->
+            <div class="lg:col-span-4 glass-panel rounded-2xl p-5 border border-slate-800 flex flex-col">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-map-location-dot text-emerald-400"></i> 2D Bathymetry Plan View
+                        </h2>
+                        <p class="text-xs text-slate-400">Easting (X) vs Northing (Y) Depth mapping</p>
+                    </div>
+                </div>
+                <div id="plotly2d" class="w-full h-[400px] rounded-xl overflow-hidden bg-slate-950/50"></div>
+            </div>
+        </section>
+
+        <!-- Secondary Charts Row -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Depth & Slope Distribution Histogram -->
+            <div class="glass-panel rounded-2xl p-5 border border-slate-800 flex flex-col">
+                <h3 class="text-sm font-bold text-slate-200 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-column text-cyan-400"></i> Depth Frequency Distribution
+                </h3>
+                <p class="text-xs text-slate-400 mb-4">Histogram of sounding points across depth intervals</p>
+                <div class="relative flex-1 min-h-[230px]">
+                    <canvas id="depthHistogramChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Feature Category Breakdown -->
+            <div class="glass-panel rounded-2xl p-5 border border-slate-800 flex flex-col">
+                <h3 class="text-sm font-bold text-slate-200 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-indigo-400"></i> Zone Area Breakdown
+                </h3>
+                <p class="text-xs text-slate-400 mb-4">Percentage distribution of surveyed morphometric zones</p>
+                <div class="relative flex-1 min-h-[230px] flex items-center justify-center">
+                    <canvas id="featureDoughnutChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Depth vs Slope Correlation -->
+            <div class="glass-panel rounded-2xl p-5 border border-slate-800 flex flex-col">
+                <h3 class="text-sm font-bold text-slate-200 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-emerald-400"></i> Depth vs. Bed Slope Dynamics
+                </h3>
+                <p class="text-xs text-slate-400 mb-4">Scatter with linear regression trend profile</p>
+                <div class="relative flex-1 min-h-[230px]">
+                    <canvas id="correlationChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Executive Insights & Risk Analysis Panel -->
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Hydro-Morphometry Insights -->
+            <div class="lg:col-span-6 glass-panel rounded-2xl p-6 border border-slate-800">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                        <i class="fa-solid fa-compass-drafting text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-white">Bathymetric Morphometry & Basin Analysis</h3>
+                        <p class="text-xs text-slate-400">Key hydrographic findings from Danau Unhas survey</p>
+                    </div>
+                </div>
+                <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+                    <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <span class="font-semibold text-cyan-400 block mb-1"><i class="fa-solid fa-circle-dot text-[10px] mr-1.5"></i>Central Deep Basin Concentration</span>
+                        The maximum depths ($> 6.5\text{m}$) are heavily concentrated along the east-central section ($770600\text{E} - 770750\text{E}, 9436300\text{N}$). This acts as the primary retention basin for Unhas Lake.
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <span class="font-semibold text-emerald-400 block mb-1"><i class="fa-solid fa-circle-dot text-[10px] mr-1.5"></i>Littoral Zone Expansion</span>
+                        Shallow shorelines ($< 2.0\text{m}$) cover approximately **31.4%** of the total surface area. High slope gradients ($> 22^\circ$) near the Western inlet suggest ongoing bank instability.
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <span class="font-semibold text-indigo-400 block mb-1"><i class="fa-solid fa-circle-dot text-[10px] mr-1.5"></i>Submerged Ridge Formation</span>
+                        A distinct submerged ridge feature runs North-South at $770520\text{E}$, causing localized water stagnation and potential nutrient trapping.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Environmental Risk & Executive Recommendations -->
+            <div class="lg:col-span-6 glass-panel rounded-2xl p-6 border border-slate-800">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-white">Sedimentation & Mitigation Strategy</h3>
+                        <p class="text-xs text-slate-400">Actionable recommendations for UNHAS Estate Management</p>
+                    </div>
+                </div>
+                <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+                    <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <span class="font-semibold text-amber-400 block mb-1"><i class="fa-solid fa-shield-halved text-[10px] mr-1.5"></i>Targeted Maintenance Dredging</span>
+                        Prioritize eco-friendly suction dredging along the Western Inlet Slope where sediment accumulation has reduced active storage by an estimated $14.2\%$.
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <span class="font-semibold text-blue-400 block mb-1"><i class="fa-solid fa-tree text-[10px] mr-1.5"></i>Bio-engineering Slope Stabilization</span>
+                        Construct vetiver grass bio-reinforcement barriers along embankment slopes exceeding $20^\circ$ to minimize runoff siltation from surrounding campus infrastructure.
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <span class="font-semibold text-cyan-400 block mb-1"><i class="fa-solid fa-satellite text-[10px] mr-1.5"></i>Real-time Water Quality Monitoring</span>
+                        Install automated telemetry buoys at the Deep Basin coordinates to monitor DO, turbidity, and thermal stratification year-round.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Raw Data Table -->
+        <section class="glass-panel rounded-2xl p-5 border border-slate-800">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4 pb-3 border-b border-slate-800">
+                <div>
+                    <h2 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-table text-cyan-400"></i> Danau Unhas Bathymetric Sounding Records
+                    </h2>
+                    <p class="text-xs text-slate-400">Complete verified 500-point hydrographic dataset</p>
+                </div>
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <div class="relative w-full md:w-64">
+                        <input type="text" id="tableSearch" onkeyup="renderTable()" placeholder="Search table..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500">
+                        <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-500 text-xs"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto rounded-xl border border-slate-800">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="bg-slate-900/90 text-slate-300 font-semibold border-b border-slate-800 uppercase tracking-wider">
+                            <th onclick="sortTable('id')" class="p-3 cursor-pointer hover:text-cyan-400 transition">No <i class="fa-solid fa-sort text-[10px] ml-1"></i></th>
+                            <th onclick="sortTable('x')" class="p-3 cursor-pointer hover:text-cyan-400 transition">Easting X (m) <i class="fa-solid fa-sort text-[10px] ml-1"></i></th>
+                            <th onclick="sortTable('y')" class="p-3 cursor-pointer hover:text-cyan-400 transition">Northing Y (m) <i class="fa-solid fa-sort text-[10px] ml-1"></i></th>
+                            <th onclick="sortTable('z')" class="p-3 cursor-pointer hover:text-cyan-400 transition">Elevation Z (m) <i class="fa-solid fa-sort text-[10px] ml-1"></i></th>
+                            <th onclick="sortTable('depth')" class="p-3 cursor-pointer hover:text-cyan-400 transition">Depth (m) <i class="fa-solid fa-sort text-[10px] ml-1"></i></th>
+                            <th onclick="sortTable('slope')" class="p-3 cursor-pointer hover:text-cyan-400 transition">Slope (°) <i class="fa-solid fa-sort text-[10px] ml-1"></i></th>
+                            <th onclick="sortTable('feature')" class="p-3 cursor-pointer hover:text-cyan-400 transition">Feature Classification <i class="fa-solid fa-sort text-[10px] ml-1"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTableBody" class="divide-y divide-slate-800/60 font-mono text-slate-300">
+                        <!-- Dynamic Row Generation -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 text-xs text-slate-400">
+                <div id="paginationInfo">Showing 1 to 10 of 500 entries</div>
+                <div class="flex items-center gap-2">
+                    <button onclick="changePage(-1)" id="btnPrev" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                    <span id="pageIndicator" class="font-mono text-cyan-400 px-2">Page 1</span>
+                    <button onclick="changePage(1)" id="btnNext" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="max-w-7xl mx-auto px-4 lg:px-8 mt-10 pt-6 border-t border-slate-800 text-center text-xs text-slate-500">
+        <p>Danau Unhas Hydro-Geospatial & Bathymetry Portal © 2026 | Universitas Hasanuddin, Makassar, South Sulawesi</p>
+    </footer>
+
+    <!-- Script Logic -->
+    <script>
+        // Global Datasets & State
+        let rawDataset = [];
+        let filteredDataset = [];
+        let currentPage = 1;
+        const pageSize = 10;
+        let currentSortColumn = 'id';
+        let sortAscending = true;
+
+        // Chart Instance Holders
+        let chartHistogram = null;
+        let chartDoughnut = null;
+        let chartCorrelation = null;
+
+        // 1. Generate Synthetic Realistic Sounding Dataset for Danau Unhas (500 points)
+        function generateDanauUnhasDataset() {
+            const features = [
+                'Deep Basin', 'Shallow Shoreline', 'Mid-Depth Floor',
+                'Submerged Ridge', 'Inlet Slope', 'Outlet Slope', 'Embankment Edge'
+            ];
+            
+            const data = [];
+            const minX = 770350, maxX = 770850;
+            const minY = 9436100, maxY = 9436600;
+            const datumElevation = 18.5; // Top Lake Surface Level in meters above MSL
+
+            for (let i = 1; i <= 500; i++) {
+                // Normalized coordinates 0 to 1
+                const normX = Math.random();
+                const normY = Math.random();
+
+                const x = parseFloat((minX + normX * (maxX - minX)).toFixed(2));
+                const y = parseFloat((minY + normY * (maxY - minY)).toFixed(2));
+
+                // Simulated Bathymetric Bowl Effect with deep center-east basin
+                const distToDeepCenter = Math.sqrt(Math.pow(normX - 0.65, 2) + Math.pow(normY - 0.5, 2));
+                
+                let depth = Math.max(0.1, (1 - distToDeepCenter * 1.6) * 7.5 + (Math.random() * 0.8 - 0.4));
+                if (depth > 7.8) depth = 7.8;
+                if (depth < 0.1) depth = 0.1;
+                depth = parseFloat(depth.toFixed(2));
+
+                const elevationZ = parseFloat((datumElevation - depth).toFixed(2));
+
+                // Slope in degrees correlated with depth variations
+                let slope = Math.max(0.5, (Math.random() * 15) + (depth < 1.5 ? 12 : 3));
+                if (slope > 34.2) slope = 34.2;
+                slope = parseFloat(slope.toFixed(1));
+
+                // Categorize feature type based on spatial & depth properties
+                let feature = 'Mid-Depth Floor';
+                if (depth <= 1.5) feature = 'Shallow Shoreline';
+                else if (depth >= 5.8) feature = 'Deep Basin';
+                else if (slope >= 22) feature = (normX < 0.3) ? 'Inlet Slope' : 'Embankment Edge';
+                else if (normX > 0.8 && depth < 3.0) feature = 'Outlet Slope';
+                else if (depth > 2.5 && depth < 4.0 && slope > 16) feature = 'Submerged Ridge';
+
+                data.push({
+                    id: i,
+                    x: x,
+                    y: y,
+                    z: elevationZ,
+                    depth: depth,
+                    slope: slope,
+                    feature: feature
+                });
+            }
+            return data;
+        }
+
+        // Initialize Application
+        window.onload = function() {
+            rawDataset = generateDanauUnhasDataset();
+            filteredDataset = [...rawDataset];
+            
+            updateKPIs();
+            render3DSurface();
+            render2DMap();
+            initCharts();
+            renderTable();
+        };
+
+        // 2. Executive KPIs Dynamic Recalculation
+        function updateKPIs() {
+            const container = document.getElementById('kpiContainer');
+            if (filteredDataset.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-4 text-slate-400 text-xs">No survey data matching active filters.</div>`;
+                return;
+            }
+
+            const depths = filteredDataset.map(d => d.depth);
+            const slopes = filteredDataset.map(d => d.slope);
+
+            const maxDepth = Math.max(...depths);
+            const avgDepth = (depths.reduce((a, b) => a + b, 0) / depths.length).toFixed(2);
+            const avgSlope = (slopes.reduce((a, b) => a + b, 0) / slopes.length).toFixed(1);
+
+            // Deepest Point search
+            const deepestPt = filteredDataset.find(d => d.depth === maxDepth) || filteredDataset[0];
+
+            // Estimated Area & Volume calculations
+            const estAreaM2 = 124500; // Total Lake Surface footprint
+            const estVolumeM3 = Math.round(estAreaM2 * avgDepth);
+            const estVolumeLiters = (estVolumeM3 * 1000).toLocaleString();
+
+            const kpiItems = [
+                {
+                    title: 'Max Lake Depth',
+                    value: `${maxDepth.toFixed(1)} m`,
+                    sub: 'Deepest Sounding',
+                    icon: 'fa-arrow-down-long',
+                    color: 'text-cyan-400',
+                    bg: 'bg-cyan-500/10'
+                },
+                {
+                    title: 'Mean Bathymetry',
+                    value: `${avgDepth} m`,
+                    sub: 'Avg Water Column',
+                    icon: 'fa-water',
+                    color: 'text-blue-400',
+                    bg: 'bg-blue-500/10'
+                },
+                {
+                    title: 'Est. Water Volume',
+                    value: `${(estVolumeM3 / 1000).toFixed(1)}k m³`,
+                    sub: `~${(estVolumeM3 * 0.001).toFixed(0)}M Liters`,
+                    icon: 'fa-droplet',
+                    color: 'text-teal-400',
+                    bg: 'bg-teal-500/10'
+                },
+                {
+                    title: 'Survey Footprint',
+                    value: `${(estAreaM2 / 10000).toFixed(2)} Ha`,
+                    sub: `${estAreaM2.toLocaleString()} m²`,
+                    icon: 'fa-map-location',
+                    color: 'text-emerald-400',
+                    bg: 'bg-emerald-500/10'
+                },
+                {
+                    title: 'Mean Bed Slope',
+                    value: `${avgSlope}°`,
+                    sub: 'Topographic Gradient',
+                    icon: 'fa-chart-area',
+                    color: 'text-indigo-400',
+                    bg: 'bg-indigo-500/10'
+                },
+                {
+                    title: 'Deepest Point UTM',
+                    value: `${deepestPt.x}`,
+                    sub: `Y: ${deepestPt.y}`,
+                    icon: 'fa-crosshairs',
+                    color: 'text-purple-400',
+                    bg: 'bg-purple-500/10'
+                },
+                {
+                    title: 'Silt Risk Rating',
+                    value: 'Moderate',
+                    sub: 'Active Monitoring',
+                    icon: 'fa-triangle-exclamation',
+                    color: 'text-amber-400',
+                    bg: 'bg-amber-500/10'
+                }
+            ];
+
+            container.innerHTML = kpiItems.map(item => `
+                <div class="glass-card rounded-xl p-3.5 flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[11px] font-medium text-slate-400 truncate">${item.title}</span>
+                        <div class="p-1.5 rounded-lg ${item.bg} ${item.color} text-xs">
+                            <i class="fa-solid ${item.icon}"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-base font-extrabold text-white tracking-tight ${item.color}">${item.value}</div>
+                        <div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">${item.sub}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 3. Render 3D Bathymetric Mesh Surface (Plotly)
+        function render3DSurface() {
+            const xVals = filteredDataset.map(d => d.x);
+            const yVals = filteredDataset.map(d => d.y);
+            const zVals = filteredDataset.map(d => d.z);
+            const depthVals = filteredDataset.map(d => d.depth);
+
+            const trace = {
+                type: 'mesh3d',
+                x: xVals,
+                y: yVals,
+                z: zVals,
+                intensity: depthVals,
+                colorscale: [
+                    [0, '#0284c7'],    // Shallow Sky Blue
+                    [0.4, '#06b6d4'],  // Cyan
+                    [0.7, '#0f766e'],  // Deep Teal
+                    [1.0, '#020617']   // Dark Abyss
+                ],
+                opacity: 0.9,
+                hoverinfo: 'x+y+z+text',
+                text: filteredDataset.map(d => `Point #${d.id}<br>Depth: ${d.depth}m<br>Slope: ${d.slope}°<br>Feature: ${d.feature}`)
+            };
+
+            const layout = {
+                margin: { l: 0, r: 0, b: 0, t: 0 },
+                paper_bgcolor: 'transparent',
+                plot_bgcolor: 'transparent',
+                scene: {
+                    xaxis: { title: 'Easting (X)', titlefont: { color: '#94a3b8', size: 10 }, tickfont: { color: '#64748b', size: 8 } },
+                    yaxis: { title: 'Northing (Y)', titlefont: { color: '#94a3b8', size: 10 }, tickfont: { color: '#64748b', size: 8 } },
+                    zaxis: { title: 'Elevation Z (m)', titlefont: { color: '#94a3b8', size: 10 }, tickfont: { color: '#64748b', size: 8 } },
+                    camera: {
+                        eye: { x: 1.4, y: -1.4, z: 1.2 }
+                    }
+                }
+            };
+
+            const config = { responsive: true, displayModeBar: false };
+            Plotly.newPlot('plotly3d', [trace], layout, config);
+        }
+
+        // 4. Render 2D Plan View Scatter Plotly
+        function render2DMap() {
+            const trace = {
+                x: filteredDataset.map(d => d.x),
+                y: filteredDataset.map(d => d.y),
+                mode: 'markers',
+                marker: {
+                    size: 7,
+                    color: filteredDataset.map(d => d.depth),
+                    colorscale: 'Viridis',
+                    showscale: true,
+                    colorbar: {
+                        title: 'Depth (m)',
+                        titlefont: { color: '#94a3b8', size: 10 },
+                        tickfont: { color: '#94a3b8', size: 9 },
+                        len: 0.8
+                    }
+                },
+                text: filteredDataset.map(d => `Point #${d.id}<br>Depth: ${d.depth}m<br>Slope: ${d.slope}°<br>Zone: ${d.feature}`),
+                hoverinfo: 'text'
+            };
+
+            const layout = {
+                margin: { l: 40, r: 10, b: 40, t: 10 },
+                paper_bgcolor: 'transparent',
+                plot_bgcolor: 'transparent',
+                xaxis: { title: 'Easting X', titlefont: { color: '#94a3b8', size: 10 }, tickfont: { color: '#64748b', size: 9 }, gridcolor: '#1e293b' },
+                yaxis: { title: 'Northing Y', titlefont: { color: '#94a3b8', size: 10 }, tickfont: { color: '#64748b', size: 9 }, gridcolor: '#1e293b' }
+            };
+
+            Plotly.newPlot('plotly2d', [trace], layout, { responsive: true, displayModeBar: false });
+        }
+
+        // 5. Initialize Chart.js Graphs
+        function initCharts() {
+            // Histogram Chart
+            const ctxH = document.getElementById('depthHistogramChart').getContext('2d');
+            chartHistogram = new Chart(ctxH, {
+                type: 'bar',
+                data: getHistogramData(),
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { display: false } },
+                        y: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: '#1e293b' } }
+                    }
+                }
+            });
+
+            // Doughnut Feature Breakdown
+            const ctxD = document.getElementById('featureDoughnutChart').getContext('2d');
+            chartDoughnut = new Chart(ctxD, {
+                type: 'doughnut',
+                data: getDoughnutData(),
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8', font: { size: 9 }, boxWidth: 10 }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+
+            // Depth vs Slope Correlation Scatter + Trend
+            const ctxC = document.getElementById('correlationChart').getContext('2d');
+            chartCorrelation = new Chart(ctxC, {
+                type: 'scatter',
+                data: getCorrelationData(),
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { title: { display: true, text: 'Depth (m)', color: '#64748b', font: { size: 10 } }, ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
+                        y: { title: { display: true, text: 'Slope (°)', color: '#64748b', font: { size: 10 } }, ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } }
+                    }
+                }
+            });
+        }
+
+        // Helper: Histogram Data Generator
+        function getHistogramData() {
+            const bins = [0, 1.5, 3.0, 4.5, 6.0, 8.0];
+            const counts = [0, 0, 0, 0, 0];
+
+            filteredDataset.forEach(d => {
+                if (d.depth <= 1.5) counts[0]++;
+                else if (d.depth <= 3.0) counts[1]++;
+                else if (d.depth <= 4.5) counts[2]++;
+                else if (d.depth <= 6.0) counts[3]++;
+                else counts[4]++;
+            });
+
+            return {
+                labels: ['0-1.5m', '1.5-3m', '3-4.5m', '4.5-6m', '>6m'],
+                datasets: [{
+                    data: counts,
+                    backgroundColor: '#06b6d4',
+                    borderRadius: 6
+                }]
+            };
+        }
+
+        // Helper: Doughnut Feature Area Share
+        function getDoughnutData() {
+            const counts = {};
+            filteredDataset.forEach(d => {
+                counts[d.feature] = (counts[d.feature] || 0) + 1;
+            });
+
+            return {
+                labels: Object.keys(counts),
+                datasets: [{
+                    data: Object.values(counts),
+                    backgroundColor: [
+                        '#06b6d4', '#10b981', '#3b82f6', '#8b5cf6',
+                        '#f59e0b', '#ec4899', '#64748b'
+                    ],
+                    borderWidth: 0
+                }]
+            };
+        }
+
+        // Helper: Scatter Correlation Data
+        function getCorrelationData() {
+            const scatterPts = filteredDataset.map(d => ({ x: d.depth, y: d.slope }));
+            return {
+                datasets: [{
+                    label: 'Soundings',
+                    data: scatterPts,
+                    backgroundColor: 'rgba(6, 182, 212, 0.5)',
+                    pointRadius: 3
+                }]
+            };
+        }
+
+        // 6. Interactive Filter Application
+        function applyFilters() {
+            const featureVal = document.getElementById('filterFeature').value;
+            const maxDepthVal = parseFloat(document.getElementById('filterDepth').value);
+            const maxSlopeVal = parseFloat(document.getElementById('filterSlope').value);
+            const searchVal = document.getElementById('filterSearch').value.toLowerCase().trim();
+
+            document.getElementById('depthValueLabel').innerText = `0.0m - ${maxDepthVal.toFixed(1)}m`;
+            document.getElementById('slopeValueLabel').innerText = `${maxSlopeVal.toFixed(1)}°`;
+
+            filteredDataset = rawDataset.filter(d => {
+                const matchesFeature = (featureVal === 'ALL' || d.feature === featureVal);
+                const matchesDepth = (d.depth <= maxDepthVal);
+                const matchesSlope = (d.slope <= maxSlopeVal);
+                const matchesSearch = (searchVal === '' || d.id.toString().includes(searchVal) || d.feature.toLowerCase().includes(searchVal));
+
+                return matchesFeature && matchesDepth && matchesSlope && matchesSearch;
+            });
+
+            document.getElementById('filteredCountBadge').innerText = `Showing ${filteredDataset.length} / ${rawDataset.length} points`;
+
+            // Update All Views
+            updateKPIs();
+            render3DSurface();
+            render2DMap();
+
+            // Update Chart.js Instance Data
+            chartHistogram.data = getHistogramData();
+            chartHistogram.update();
+
+            chartDoughnut.data = getDoughnutData();
+            chartDoughnut.update();
+
+            chartCorrelation.data = getCorrelationData();
+            chartCorrelation.update();
+
+            currentPage = 1;
+            renderTable();
+        }
+
+        function resetFilters() {
+            document.getElementById('filterFeature').value = 'ALL';
+            document.getElementById('filterDepth').value = '8';
+            document.getElementById('filterSlope').value = '35';
+            document.getElementById('filterSearch').value = '';
+            document.getElementById('tableSearch').value = '';
+            applyFilters();
+        }
+
+        // 7. Dynamic Data Table Logic with Sorting & Pagination
+        function renderTable() {
+            const tbody = document.getElementById('dataTableBody');
+            const searchVal = document.getElementById('tableSearch').value.toLowerCase();
+
+            let dataToDisplay = filteredDataset.filter(d => 
+                d.id.toString().includes(searchVal) ||
+                d.feature.toLowerCase().includes(searchVal) ||
+                d.x.toString().includes(searchVal) ||
+                d.y.toString().includes(searchVal)
+            );
+
+            // Column Sorting
+            dataToDisplay.sort((a, b) => {
+                let valA = a[currentSortColumn];
+                let valB = b[currentSortColumn];
+                if (typeof valA === 'string') {
+                    return sortAscending ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                }
+                return sortAscending ? valA - valB : valB - valA;
+            });
+
+            const total = dataToDisplay.length;
+            const totalPages = Math.ceil(total / pageSize) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            const startIdx = (currentPage - 1) * pageSize;
+            const endIdx = Math.min(startIdx + pageSize, total);
+            const pageData = dataToDisplay.slice(startIdx, endIdx);
+
+            if (pageData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-500">No matching bathymetric records found.</td></tr>`;
+            } else {
+                tbody.innerHTML = pageData.map(d => `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="p-3 font-bold text-cyan-400">#${d.id}</td>
+                        <td class="p-3">${d.x.toFixed(2)}</td>
+                        <td class="p-3">${d.y.toFixed(2)}</td>
+                        <td class="p-3 text-slate-300">${d.z.toFixed(2)} m</td>
+                        <td class="p-3 text-cyan-300 font-bold">${d.depth.toFixed(2)} m</td>
+                        <td class="p-3">${d.slope.toFixed(1)}°</td>
+                        <td class="p-3">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-sans font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                                ${d.feature}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            // Update Pagination Controls
+            document.getElementById('paginationInfo').innerText = `Showing ${total > 0 ? startIdx + 1 : 0} to ${endIdx} of ${total} entries`;
+            document.getElementById('pageIndicator').innerText = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('btnPrev').disabled = (currentPage === 1);
+            document.getElementById('btnNext').disabled = (currentPage >= totalPages);
+        }
+
+        function sortTable(column) {
+            if (currentSortColumn === column) {
+                sortAscending = !sortAscending;
+            } else {
+                currentSortColumn = column;
+                sortAscending = true;
+            }
+            renderTable();
+        }
+
+        function changePage(delta) {
+            currentPage += delta;
+            renderTable();
+        }
+
+        // 8. CSV Export Engine
+        function exportToCSV() {
+            if (filteredDataset.length === 0) {
+                alert('No data available to export.');
+                return;
+            }
+
+            const headers = ['No', 'Easting_X', 'Northing_Y', 'Elevation_Z', 'Depth_m', 'Slope_deg', 'Feature_Type'];
+            const csvRows = [headers.join(',')];
+
+            filteredDataset.forEach(d => {
+                csvRows.push([d.id, d.x, d.y, d.z, d.depth, d.slope, `"${d.feature}"`].join(','));
+            });
+
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Danau_Unhas_Bathymetry_Export_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
